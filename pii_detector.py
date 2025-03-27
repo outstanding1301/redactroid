@@ -1,12 +1,12 @@
 import asyncio
 import textwrap
-
 from dotenv import load_dotenv
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import SystemMessagePromptTemplate, HumanMessagePromptTemplate, ChatPromptTemplate
 from langchain_openai import ChatOpenAI
+from langchain_community.callbacks.openai_info import OpenAICallbackHandler
 
-from models import Pii
+from models import Pii, LlmResponse
 
 load_dotenv()
 
@@ -69,18 +69,34 @@ def fix_pii(pii: Pii) -> Pii:
     return result
 
 
-async def detect_pii(text: str) -> Pii:
+async def detect_pii(text: str) -> LlmResponse:
     chunks = split_text(text)
 
+    total_prompt_tokens = 0
+    total_completion_tokens = 0
+    total_calls = 0
+
     async def process_chunk(i: int, chunk: str) -> Pii:
-        print(f"청크 {i + 1}/{len(chunks)} 분석 시작")
-        result = await chain.ainvoke({"text": chunk})
+        nonlocal total_prompt_tokens, total_completion_tokens, total_calls
+        print(f"청크 {i + 1}/{len(chunks)} 분석 중...")
+
+        cb = OpenAICallbackHandler()
+        result = await chain.ainvoke({"text": chunk}, config={"callbacks": [cb]})
         fixed = fix_pii(result)
-        print(f"청크 {i + 1}/{len(chunks)} 결과: {fixed}")
+
+        total_prompt_tokens += cb.prompt_tokens
+        total_completion_tokens += cb.completion_tokens
+        total_calls += 1
+
+        print(fixed)
         return fixed
 
-    tasks = [process_chunk(i, chunk) for i, chunk in enumerate(chunks)]
-    results = await asyncio.gather(*tasks)
-
+    results = await asyncio.gather(*[process_chunk(i, chunk) for i, chunk in enumerate(chunks)])
     merged = merge_results(results)
-    return merged
+
+    return LlmResponse(
+        pii=merged,
+        prompt_tokens=total_prompt_tokens,
+        completion_tokens=total_completion_tokens,
+        calls=total_calls
+    )

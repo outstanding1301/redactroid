@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Response
 
 from pii_detector import detect_pii
 
@@ -6,7 +6,7 @@ app = FastAPI()
 
 
 @app.post("/detect")
-async def detect(file: UploadFile = File(...)):
+async def detect(file: UploadFile = File(...), response: Response = None):
     if file.content_type != "text/plain":
         raise HTTPException(
             status_code=400,
@@ -15,5 +15,9 @@ async def detect(file: UploadFile = File(...)):
 
     contents = await file.read()
     text = contents.decode("utf-8")
-    pii = await detect_pii(text)
-    return {"pii": pii}
+    pii_response = await detect_pii(text)
+
+    response.headers["redactroid_prompt_tokens"] = str(pii_response.prompt_tokens)
+    response.headers["redactroid_completion_tokens"] = str(pii_response.completion_tokens)
+    response.headers["redactroid_calls"] = str(pii_response.calls)
+    return {"pii": pii_response.pii}

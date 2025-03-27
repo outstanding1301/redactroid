@@ -7,3 +7,10 @@ class Pii(BaseModel):
     rrn: list[str]
     email: list[str]
     address: list[str]
+
+
+class LlmResponse(BaseModel):
+    pii: Pii
+    prompt_tokens: int
+    completion_tokens: int
+    calls: int
