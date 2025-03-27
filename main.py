@@ -15,5 +15,5 @@ async def detect(file: UploadFile = File(...)):
 
     contents = await file.read()
     text = contents.decode("utf-8")
-    pii = detect_pii(text)
+    pii = await detect_pii(text)
     return {"pii": pii}

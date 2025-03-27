@@ -1,3 +1,4 @@
+import asyncio
 import textwrap
 
 from dotenv import load_dotenv
@@ -68,15 +69,18 @@ def fix_pii(pii: Pii) -> Pii:
     return result
 
 
-def detect_pii(text: str) -> Pii:
+async def detect_pii(text: str) -> Pii:
     chunks = split_text(text)
-    results = []
 
-    for i, chunk in enumerate(chunks):
-        print(f"청크 {i + 1}/{len(chunks)} 분석 중...")
-        result = fix_pii(chain.invoke({"text": chunk}))
-        print(result)
-        results.append(result)
+    async def process_chunk(i: int, chunk: str) -> Pii:
+        print(f"청크 {i + 1}/{len(chunks)} 분석 시작")
+        result = await chain.ainvoke({"text": chunk})
+        fixed = fix_pii(result)
+        print(f"청크 {i + 1}/{len(chunks)} 결과: {fixed}")
+        return fixed
+
+    tasks = [process_chunk(i, chunk) for i, chunk in enumerate(chunks)]
+    results = await asyncio.gather(*tasks)
 
     merged = merge_results(results)
     return merged
