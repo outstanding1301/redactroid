@@ -1,3 +1,5 @@
+import textwrap
+
 from dotenv import load_dotenv
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import SystemMessagePromptTemplate, HumanMessagePromptTemplate, ChatPromptTemplate
@@ -6,6 +8,8 @@ from langchain_openai import ChatOpenAI
 from models import Pii
 
 load_dotenv()
+
+CHUNK_SIZE = 1000
 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
@@ -22,8 +26,57 @@ output_parser = PydanticOutputParser(pydantic_object=Pii)
 chain = prompt | llm | output_parser
 
 
-def detect_pii(text: str) -> Pii:
-    print(text)
-    result = chain.invoke({"text": text})
-    print(result)
+def split_text(text: str) -> list[str]:
+    return textwrap.wrap(text, CHUNK_SIZE, break_long_words=False, replace_whitespace=False)
+
+
+def merge_results(results: list[Pii]) -> Pii:
+    def unique(flat_list):
+        return list(set(flat_list))
+
+    return Pii(
+        name=unique([item for res in results for item in res.name]),
+        phone=unique([item for res in results for item in res.phone]),
+        rrn=unique([item for res in results for item in res.rrn]),
+        email=unique([item for res in results for item in res.email]),
+        address=unique([item for res in results for item in res.address]),
+    )
+
+
+def fix_pii(pii: Pii) -> Pii:
+    result = pii.copy()
+
+    result.name = [name for name in pii.name if len(name) >= 2]
+
+    def is_valid_rrn(rrn: str) -> bool:
+        if '-' not in rrn:
+            return len(rrn) == 13
+        if len(rrn) != 14:
+            return False
+        parts = rrn.split('-')
+        if len(parts) != 2:
+            return False
+        first, second = parts
+        if len(first) != 6 or len(second) != 7:
+            return False
+        if second[0] not in ['1', '2', '3', '4']:
+            return False
+        return True
+
+    result.rrn = [rrn for rrn in pii.rrn if is_valid_rrn(rrn)]
+
     return result
+
+
+def detect_pii(text: str) -> Pii:
+    chunks = split_text(text)
+    results = []
+
+    for i, chunk in enumerate(chunks):
+        print(f"청크 {i + 1}/{len(chunks)} 분석 중...")
+        result = fix_pii(chain.invoke({"text": chunk}))
+        print(result)
+        results.append(result)
+
+    merged = merge_results(results)
+    return merged
