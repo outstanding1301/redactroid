@@ -1,18 +1,15 @@
 import asyncio
 import textwrap
-from dotenv import load_dotenv
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import SystemMessagePromptTemplate, HumanMessagePromptTemplate, ChatPromptTemplate
-from langchain_openai import ChatOpenAI
 from langchain_community.callbacks.openai_info import OpenAICallbackHandler
 
+import llm_model
 from models import Pii, LlmResponse
-
-load_dotenv()
 
 CHUNK_SIZE = 1000
 
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+llm = llm_model.llm
 
 system_template = SystemMessagePromptTemplate.from_template(
     "당신은 한국 개인정보 식별 전문가입니다. 정확한 개인정보 형식만 인식하세요. 형식이 일치하지 않으면 절대 포함하지 마세요. 틀리면 작업 실패로 간주됩니다."
@@ -94,7 +91,13 @@ async def detect_pii(text: str) -> LlmResponse:
         print(f"PII of Chunk {i + 1}/{len(chunks)}: {fixed}")
         return fixed
 
-    results = await asyncio.gather(*[process_chunk(i, chunk) for i, chunk in enumerate(chunks)])
+    if llm_model.model.startswith('gpt'):
+        results = await asyncio.gather(*[process_chunk(i, chunk) for i, chunk in enumerate(chunks)])
+    else:
+        results = []
+        for i, chunk in enumerate(chunks):
+            result = await process_chunk(i, chunk)
+            results.append(result)
     merged = merge_results(results)
     print("Results:")
     print(f"- PII: {merged}")
