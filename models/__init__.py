@@ -8,6 +8,9 @@ class Pii(BaseModel):
     email: list[str]
     address: list[str]
 
+    def get_texts(self) -> list[str]:
+        return list(set(self.name + self.phone + self.rrn + self.email + self.address))
+
 
 class LlmResponse(BaseModel):
     pii: Pii
