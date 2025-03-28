@@ -13,7 +13,7 @@ async def detect(file: UploadFile = File(...)) -> JSONResponse:
     if file.content_type not in ("application/pdf", "text/plain"):
         raise HTTPException(
             status_code=400,
-            detail=f"지원되지 않는 파일 형식입니다: {file.content_type}."
+            detail=f"Unsupported content type: {file.content_type}."
         )
     contents = await file.read()
     if file.content_type == "text/plain":
@@ -21,8 +21,6 @@ async def detect(file: UploadFile = File(...)) -> JSONResponse:
     else:
         text = pdf_service.extract_text(contents)
 
-    text = text.strip().replace("\n", "")
-    print(f"Text: {text}")
     pii_response = await detect_pii(text)
 
     return JSONResponse(
@@ -40,7 +38,7 @@ async def redact(file: UploadFile = File(...)) -> Response:
     if file.content_type != "application/pdf":
         raise HTTPException(
             status_code=400,
-            detail=f"지원되지 않는 파일 형식입니다: {file.content_type}."
+            detail=f"Unsupported content type: {file.content_type}."
         )
 
     contents = await file.read()

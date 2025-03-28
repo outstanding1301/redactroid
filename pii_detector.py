@@ -70,7 +70,10 @@ def fix_pii(pii: Pii) -> Pii:
 
 
 async def detect_pii(text: str) -> LlmResponse:
+    text = text.strip().replace("\n", "")
     chunks = split_text(text)
+    for i, chunk in enumerate(chunks):
+        print(f"Chunk {i + 1}/{len(chunks)}: {chunk}")
 
     total_prompt_tokens = 0
     total_completion_tokens = 0
@@ -78,7 +81,7 @@ async def detect_pii(text: str) -> LlmResponse:
 
     async def process_chunk(i: int, chunk: str) -> Pii:
         nonlocal total_prompt_tokens, total_completion_tokens, total_calls
-        print(f"청크 {i + 1}/{len(chunks)} 분석 중...")
+        print(f"Analyzing Chunk {i + 1}/{len(chunks)}...")
 
         cb = OpenAICallbackHandler()
         result = await chain.ainvoke({"text": chunk}, config={"callbacks": [cb]})
@@ -88,11 +91,16 @@ async def detect_pii(text: str) -> LlmResponse:
         total_completion_tokens += cb.completion_tokens
         total_calls += 1
 
-        print(fixed)
+        print(f"PII of Chunk {i + 1}/{len(chunks)}: {fixed}")
         return fixed
 
     results = await asyncio.gather(*[process_chunk(i, chunk) for i, chunk in enumerate(chunks)])
     merged = merge_results(results)
+    print("Results:")
+    print(f"- PII: {merged}")
+    print(f"- Input token: {total_prompt_tokens}")
+    print(f"- Output token: {total_completion_tokens}")
+    print(f"- Calls: {total_calls}")
 
     return LlmResponse(
         pii=merged,

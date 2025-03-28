@@ -28,12 +28,9 @@ def redact(pdf, pii: Pii) -> bytes:
                         continue
                     chars = span["chars"]
                     span_text = ''.join([char.get('c', '') for char in chars])
-                    print("Span text:", span_text)
-
                     for target in texts:
                         for match in re.finditer(re.escape(target), span_text):
                             start, end = match.span()
-                            print(f"Found '{target}' in span [{start}-{end}]")
                             union_rect = None
                             for char in chars[start:end]:
                                 char_rect = pymupdf.Rect(char["bbox"])
@@ -42,7 +39,7 @@ def redact(pdf, pii: Pii) -> bytes:
                                 else:
                                     union_rect |= char_rect
                             if union_rect:
-                                print("Adding redaction annotation:", union_rect)
+                                print(f"Found '{target}' in span [{start}-{end}] - redaction annotation: {union_rect}")
                                 page.add_redact_annot(union_rect)
         # 페이지에 적용
         # page.apply_redactions()
