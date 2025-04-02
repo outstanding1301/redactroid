@@ -67,7 +67,7 @@ def fix_pii(pii: Pii) -> Pii:
 
 
 async def detect_pii(text: str) -> LlmResponse:
-    text = text.strip().replace("\n", "")
+    # text = text.strip().replace("\n", "")
     chunks = split_text(text)
     for i, chunk in enumerate(chunks):
         print(f"Chunk {i + 1}/{len(chunks)}: {chunk}")
