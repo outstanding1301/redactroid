@@ -1,13 +1,13 @@
 import asyncio
-import textwrap
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import SystemMessagePromptTemplate, HumanMessagePromptTemplate, ChatPromptTemplate
 from langchain_community.callbacks.openai_info import OpenAICallbackHandler
 
 import llm_model
 from models import Pii, LlmResponse
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-CHUNK_SIZE = 1000
+CHUNK_SIZE = 512
 
 llm = llm_model.llm
 
@@ -22,10 +22,6 @@ prompt = ChatPromptTemplate.from_messages([system_template, human_template])
 output_parser = PydanticOutputParser(pydantic_object=Pii)
 
 chain = prompt | llm | output_parser
-
-
-def split_text(text: str) -> list[str]:
-    return textwrap.wrap(text, CHUNK_SIZE, break_long_words=False, replace_whitespace=False)
 
 
 def merge_results(results: list[Pii]) -> Pii:
@@ -66,9 +62,20 @@ def fix_pii(pii: Pii) -> Pii:
     return result
 
 
+def langchain_split(text: str, chunk_size: int = CHUNK_SIZE):
+    chunk_overlap = chunk_size * 0.1
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        length_function=len,
+        separators=["\n\n", "\n", ".", "!", "?", " ", ""],
+    )
+    return splitter.split_text(text)
+
+
 async def detect_pii(text: str) -> LlmResponse:
-    # text = text.strip().replace("\n", "")
-    chunks = split_text(text)
+    text = text.strip().replace("\n", "")
+    chunks = langchain_split(text)
     for i, chunk in enumerate(chunks):
         print(f"Chunk {i + 1}/{len(chunks)}: {chunk}")
 
