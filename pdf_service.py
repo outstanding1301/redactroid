@@ -40,7 +40,7 @@ def redact(pdf, pii: Pii) -> bytes:
                                     union_rect |= char_rect
                             if union_rect:
                                 print(f"Found '{target}' in span [{start}-{end}] - redaction annotation: {union_rect}")
-                                page.add_redact_annot(union_rect)
+                                page.add_redact_annot(union_rect, fill=(0, 0, 0))
         # 페이지에 적용
-        # page.apply_redactions()
+        page.apply_redactions()
     return doc.write()
