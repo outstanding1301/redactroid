@@ -4,7 +4,8 @@ from starlette.responses import JSONResponse
 
 import pdf_service
 from models import Pii, LlmResponse
-from pii_detector import detect_pii
+# from pii_detector import detect_pii
+from graph import detect_pii
 
 app = FastAPI()
 
@@ -38,11 +39,6 @@ async def detect(file: UploadFile = File(...)) -> JSONResponse:
 
     return JSONResponse(
         jsonable_encoder(pii_response.pii),
-        headers={
-            "redactroid_prompt_tokens": str(pii_response.prompt_tokens),
-            "redactroid_completion_tokens": str(pii_response.completion_tokens),
-            "redactroid_calls": str(pii_response.calls),
-        }
     )
 
 

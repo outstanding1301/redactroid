@@ -14,6 +14,3 @@ class Pii(BaseModel):
 
 class LlmResponse(BaseModel):
     pii: Pii
-    prompt_tokens: int
-    completion_tokens: int
-    calls: int

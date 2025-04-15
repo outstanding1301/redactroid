@@ -50,6 +50,7 @@ dependencies = [
     "langchain-huggingface==0.1.2",
     "langchain-openai==0.3.11",
     "langchain-text-splitters==0.3.7",
+    "langgraph>=0.3.29",
     "langsmith==0.3.19",
     "markupsafe==3.0.2",
     "marshmallow==3.26.1",

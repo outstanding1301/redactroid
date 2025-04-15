@@ -7,9 +7,12 @@ import llm_model
 from models import Pii, LlmResponse
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
+
+
 CHUNK_SIZE = 512
 
 llm = llm_model.llm
+
 
 system_template = SystemMessagePromptTemplate.from_template(
     "당신은 한국 개인정보 식별 전문가입니다. 정확한 개인정보 형식만 인식하세요. 형식이 일치하지 않으면 절대 포함하지 마세요. 틀리면 작업 실패로 간주됩니다."
@@ -79,20 +82,16 @@ async def detect_pii(text: str) -> LlmResponse:
     for i, chunk in enumerate(chunks):
         print(f"Chunk {i + 1}/{len(chunks)}: {chunk}")
 
-    total_prompt_tokens = 0
-    total_completion_tokens = 0
     total_calls = 0
 
     async def process_chunk(i: int, chunk: str) -> Pii:
-        nonlocal total_prompt_tokens, total_completion_tokens, total_calls
+        nonlocal total_calls
         print(f"Analyzing Chunk {i + 1}/{len(chunks)}...")
 
         cb = OpenAICallbackHandler()
         result = await chain.ainvoke({"text": chunk}, config={"callbacks": [cb]})
         fixed = fix_pii(result)
 
-        total_prompt_tokens += cb.prompt_tokens
-        total_completion_tokens += cb.completion_tokens
         total_calls += 1
 
         print(f"PII of Chunk {i + 1}/{len(chunks)}: {fixed}")
@@ -108,13 +107,8 @@ async def detect_pii(text: str) -> LlmResponse:
     merged = merge_results(results)
     print("Results:")
     print(f"- PII: {merged}")
-    print(f"- Input token: {total_prompt_tokens}")
-    print(f"- Output token: {total_completion_tokens}")
     print(f"- Calls: {total_calls}")
 
     return LlmResponse(
         pii=merged,
-        prompt_tokens=total_prompt_tokens,
-        completion_tokens=total_completion_tokens,
-        calls=total_calls
     )

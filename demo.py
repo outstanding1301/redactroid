@@ -12,8 +12,6 @@ API_REDACT_URL = "http://localhost:8000/redact"
 # ---------------------------
 if "pii_data" not in st.session_state:
     st.session_state.pii_data = {}
-if "meta_info" not in st.session_state:
-    st.session_state.meta_info = {}
 if "redacted_pdf" not in st.session_state:
     st.session_state.redacted_pdf = None
 
@@ -41,7 +39,6 @@ with st.sidebar:
     if uploaded_file is not None:
         if "last_uploaded_name" not in st.session_state or uploaded_file.name != st.session_state.last_uploaded_name:
             st.session_state.pii_data = {}
-            st.session_state.meta_info = {}
             st.session_state.redacted_pdf = None
             st.session_state.last_uploaded_name = uploaded_file.name
 
@@ -58,11 +55,6 @@ with st.sidebar:
                     response.raise_for_status()
 
                     st.session_state.pii_data = response.json()
-                    st.session_state.meta_info = {
-                        "Prompt Tokens": response.headers.get("redactroid_prompt_tokens", ""),
-                        "Completion Tokens": response.headers.get("redactroid_completion_tokens", ""),
-                        "API Calls": response.headers.get("redactroid_calls", "")
-                    }
 
                     st.success("✅ Detection completed!")
                     st.session_state.redacted_pdf = None  # 기존 Redact 결과는 제거
@@ -81,14 +73,6 @@ with st.sidebar:
             pii_table["Field"].append(key)
             pii_table["Values"].append(", ".join(f"`{v}`" for v in values) if values else "")
         st.table(pd.DataFrame(pii_table).style.hide(axis="index"))
-
-    if st.session_state.meta_info:
-        st.subheader("📈 Usage Info")
-        meta_table = {
-            "Metric": list(st.session_state.meta_info.keys()),
-            "Value": [f"`{v}`" for v in st.session_state.meta_info.values()]
-        }
-        st.table(pd.DataFrame(meta_table).style.hide(axis="index"))
 
     # 🛡️ Redact
     if uploaded_file and st.session_state.pii_data:
